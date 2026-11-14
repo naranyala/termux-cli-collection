@@ -76,6 +76,8 @@ def draw_header(title: str, query: str, width: int, search_mode: bool) -> None:
     sys.stdout.write(clip(f"  {title}", width) + "\n")
     if search_mode:
         sys.stdout.write(clip(f"  Search: {query}_", width) + "\n")
+    elif width < 72:
+        sys.stdout.write("  UP/DOWN  ENTER  / search  ? help  q\n")
     else:
         sys.stdout.write(clip("  Actions  |  / search  ? help  q quit", width) + "\n")
     sys.stdout.write("-" * width + "\n")
@@ -110,7 +112,10 @@ def draw_actions(actions: list[Action], selected: int, query: str, width: int, h
         sys.stdout.flush()
         return
 
-    compact = width < 52
+    # Keep the compact layout on phone-sized terminals even when the
+    # terminal reports a moderately wide column count. It is more readable
+    # than squeezing descriptions into a narrow action row.
+    compact = width < 72
     visible_rows = max(3, height - 7)
     start = max(0, min(selected - visible_rows + 1, len(actions) - visible_rows))
     end = min(len(actions), start + visible_rows)
@@ -131,7 +136,8 @@ def draw_actions(actions: list[Action], selected: int, query: str, width: int, h
         sys.stdout.write(clip(f" Selected: {name}", width) + "\n")
         for line in textwrap.wrap(description, width=max(12, width - 4)):
             sys.stdout.write(clip(f"   {line}", width) + "\n")
-    sys.stdout.write("\n" + clip("  UP/DOWN move  ENTER run  / search  ? help  q quit", width) + "\n")
+    footer = "  UP/DOWN  ENTER  /  ?  q" if compact else "  UP/DOWN move  ENTER run  / search  ? help  q quit"
+    sys.stdout.write("\n" + clip(footer, width) + "\n")
     sys.stdout.flush()
 
 
@@ -218,7 +224,7 @@ def launch(actions: list[Action], title: str) -> int:
                 index = selected
                 if key.startswith("NUMBER:"):
                     number = int(key[7:]) - 1
-                    if number >= len(filtered):
+                    if number < 0 or number >= len(filtered):
                         continue
                     index = number
                 termios.tcsetattr(sys.stdin, termios.TCSADRAIN, original)

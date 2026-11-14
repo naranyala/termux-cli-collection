@@ -46,7 +46,11 @@ This project provides:
 | `tcc path-check [PATH ...]` | Python | Reports missing paths, files, directories, and symlinks | Python 3 |
 | `tcc file-info [PATH]` | Python | Shows type, size, permissions, and modification time | Python 3 |
 | `tcc checksum FILE` | Python | Calculates a streaming checksum, SHA-256 by default | Python 3 |
+| `tcc ports` | Python | Shows listening network sockets when `ss` or `netstat` is available | Optional `iproute2` package |
+| `tcc processes` | Python | Shows a compact process list | Termux `ps` |
 | `tcc disk-free` | C | Shows native filesystem totals for the current directory | C compiler at install time |
+| `tcc mem-info` | C | Shows available Linux memory statistics | C compiler at install time |
+| `tcc line-count FILE` | C | Counts lines and bytes without loading the whole file | C compiler at install time |
 
 Running `tcc` without a command opens the interactive launcher. `tcc --help` and `tcc --version` are also available.
 
@@ -81,7 +85,11 @@ tcc battery --json
 tcc path-check "$HOME"
 tcc file-info README.md
 tcc checksum README.md
+tcc ports
+tcc processes
 tcc disk-free
+tcc mem-info
+tcc line-count README.md
 ```
 
 Install the optional battery integration with:
@@ -123,7 +131,7 @@ Navigation supports:
 - `ESC` to clear search;
 - `q` to quit.
 
-The launcher uses a header, action list, selected-action detail panel, search mode, help overlay, and scrolling selection on larger screens. It adapts to small screens: it detects terminal width, uses compact labels below 48 columns, clips long titles, and wraps descriptions on wider screens without overflowing horizontally.
+The launcher uses a header, action list, selected-action detail panel, search mode, help overlay, and scrolling selection on larger screens. It adapts to small screens: it detects terminal width, uses a compact single-column layout below 72 columns, clips long titles, and shows the detail panel only when there is room.
 
 To add native navigation buttons, edit `~/.termux/termux.properties`:
 
@@ -151,7 +159,9 @@ When standard input or output is not a terminal, `tcc` uses a numbered prompt in
 └── csrc/
     ├── main.c           # Native C command dispatch
     ├── disk.c           # Filesystem statistics action
-    └── disk.h           # Native action interface
+    ├── disk.h           # Disk action interface
+    ├── system.c         # Memory and line-count actions
+    └── system.h         # System action interface
 ```
 
 See [`docs/architecture.md`](docs/architecture.md) for the detailed module responsibilities.
@@ -188,7 +198,7 @@ python -m py_compile main.py tcc/*.py
 Build and test the C action without installing it globally:
 
 ```sh
-cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c -o tcc-c
+cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c csrc/system.c -o tcc-c
 ./tcc-c --help
 ./tcc-c disk-free
 rm tcc-c
@@ -197,7 +207,7 @@ rm tcc-c
 The compatibility source can also be built with:
 
 ```sh
-cc -Wall -Wextra -O2 main.c csrc/disk.c -o tcc-c
+cc -Wall -Wextra -O2 main.c csrc/disk.c csrc/system.c -o tcc-c
 ```
 
 ## Contribution guidelines

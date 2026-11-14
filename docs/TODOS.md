@@ -62,7 +62,7 @@ Calculate a file checksum.
 - Read files in chunks to support large files.
 - Keep output easy to pipe into scripts.
 
-### [ ] `tcc ports`
+### [x] `tcc ports`
 
 Show listening TCP/UDP sockets when available.
 
@@ -70,7 +70,7 @@ Show listening TCP/UDP sockets when available.
 - Clearly report when Android permissions or `/proc` access limit results.
 - Avoid requiring root.
 
-### [ ] `tcc processes`
+### [x] `tcc processes`
 
 Show a compact process summary.
 
@@ -99,7 +99,7 @@ Create a compact native directory listing.
 - Add a safe `--depth` option.
 - Gracefully handle permission errors.
 
-### [ ] `tcc line-count FILE`
+### [x] `tcc line-count FILE`
 
 Count lines in a file using a streaming C implementation.
 
@@ -107,7 +107,7 @@ Count lines in a file using a streaming C implementation.
 - Report bytes and lines.
 - Return clear errors for binary or unreadable files.
 
-### [ ] `tcc mem-info`
+### [x] `tcc mem-info`
 
 Report memory information from available POSIX/Linux interfaces.
 

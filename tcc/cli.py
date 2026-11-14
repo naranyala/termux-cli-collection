@@ -19,7 +19,11 @@ def get_actions() -> list[Action]:
         ("path-check", "Check whether the current path exists", actions.path_check),
         ("file-info", "Show metadata for the current directory", actions.file_info),
         ("checksum", "Hash the installed launcher", lambda: actions.checksum(__file__)),
+        ("ports", "Show listening network sockets", actions.ports),
+        ("processes", "Show a compact process list", actions.processes),
         ("disk-free", "Show disk space using native C", actions.native_disk_free),
+        ("mem-info", "Show native memory information", actions.native_mem_info),
+        ("line-count", "Count lines in the launcher source", lambda: actions.native_line_count(__file__)),
         ("exit", "Close the launcher", lambda: None),
     ]
 
@@ -52,6 +56,10 @@ def main() -> int:
         if len(args.target) != 1:
             parser.error("checksum requires exactly one file path")
         return actions.checksum(args.target[0], args.algorithm)
+    elif args.command == "line-count":
+        if len(args.target) != 1:
+            parser.error("line-count requires exactly one file path")
+        actions.native_line_count(args.target[0])
     else:
         action_map[args.command]()
     return 0

@@ -30,7 +30,7 @@ Reload the configuration or restart the session afterward.
 
 ## Small-screen behavior
 
-The launcher detects terminal width. On screens narrower than 48 columns it uses compact labels and hides long descriptions. Wider screens wrap descriptions rather than allowing horizontal overflow. Titles are clipped when necessary.
+The launcher detects terminal width. On screens narrower than 72 columns it uses a compact, aligned single-column list and hides long descriptions. Wider screens show descriptions and a selected-action detail area. Titles are clipped when necessary.
 
 When stdin or stdout is not a TTY, raw keyboard mode is not used. TCC displays a numbered prompt instead, which makes simple pipes and scripted checks safe.
 

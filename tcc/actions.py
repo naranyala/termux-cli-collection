@@ -139,7 +139,46 @@ def battery(as_json: bool = False) -> None:
             print(f"  {key.capitalize()}: {data[key]}")
 
 
-def native_disk_free() -> None:
+def command_output(commands: list[list[str]]) -> list[str]:
+    for command in commands:
+        executable = shutil.which(command[0])
+        if executable is None:
+            continue
+        try:
+            result = subprocess.run([executable, *command[1:]], capture_output=True, text=True, check=True)
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        return [line for line in result.stdout.splitlines() if line.strip()]
+    return []
+
+
+def ports() -> None:
+    lines = command_output([["ss", "-lntu"], ["netstat", "-lntu"]])
+    if not lines:
+        print("No socket listing tool is available (try: pkg install iproute2).", file=sys.stderr)
+        return
+    print("Listening sockets")
+    for line in lines[:20]:
+        print(f"  {line}")
+    if len(lines) > 20:
+        print(f"  ... {len(lines) - 20} more")
+
+
+def processes() -> None:
+    lines = command_output([["ps", "-A", "-o", "PID,USER,NAME"]],)
+    if not lines:
+        lines = command_output([["ps", "-A"]])
+    if not lines:
+        print("Process listing is unavailable.", file=sys.stderr)
+        return
+    print("Processes (first 20)")
+    for line in lines[:21]:
+        print(f"  {line}")
+    if len(lines) > 21:
+        print(f"  ... {len(lines) - 21} more")
+
+
+def native_action(command: str, *arguments: str) -> None:
     binary = os.environ.get("TCC_C_BINARY")
     if not binary:
         # Installed layout: $PREFIX/share/tcc/tcc/actions.py.
@@ -148,4 +187,16 @@ def native_disk_free() -> None:
     if not Path(binary).is_file():
         print("The native action is unavailable. Rerun ./install.sh.", file=sys.stderr)
         return
-    subprocess.run([binary, "disk-free"], check=False)
+    subprocess.run([binary, command, *arguments], check=False)
+
+
+def native_disk_free() -> None:
+    native_action("disk-free")
+
+
+def native_mem_info() -> None:
+    native_action("mem-info")
+
+
+def native_line_count(target: str) -> None:
+    native_action("line-count", target)

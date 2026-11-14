@@ -17,6 +17,8 @@ python main.py storage
 python main.py path-check README.md
 python main.py file-info README.md
 python main.py checksum README.md
+python main.py ports
+python main.py processes
 ```
 
 Test the non-TTY menu fallback:
@@ -36,7 +38,7 @@ printf '1\n' | COLUMNS=32 python main.py
 Build with warnings enabled:
 
 ```sh
-cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c -o tcc-c
+cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c csrc/system.c -o tcc-c
 ./tcc-c --help
 ./tcc-c disk-free
 rm tcc-c
@@ -45,7 +47,7 @@ rm tcc-c
 The compatibility wrapper can also be built with:
 
 ```sh
-cc -Wall -Wextra -O2 main.c csrc/disk.c -o tcc-c
+cc -Wall -Wextra -O2 main.c csrc/disk.c csrc/system.c -o tcc-c
 ```
 
 ## Full local installation check

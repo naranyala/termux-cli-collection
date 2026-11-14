@@ -25,13 +25,14 @@ csrc/main.c
 
 - `csrc/main.c` handles native command dispatch and help/version output.
 - `csrc/disk.c` implements filesystem statistics using `statvfs`.
-- `csrc/disk.h` exposes the native action interface.
+- `csrc/system.c` implements `/proc/meminfo` and streaming line counting.
+- `csrc/disk.h` and `csrc/system.h` expose native action interfaces.
 - Root `main.c` is a compatibility build wrapper.
 
 Build the native action with:
 
 ```sh
-cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c -o tcc-c
+cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c csrc/system.c -o tcc-c
 ```
 
 ## Adding an action
