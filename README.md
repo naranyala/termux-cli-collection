@@ -4,6 +4,18 @@ A small collection of practical, shell-friendly command-line utilities for [Term
 
 The project is designed for everyday Android terminal workflows, experimentation, and learning. It does not require root access.
 
+## Documentation
+
+Detailed documentation is maintained in [`docs/`](docs/README.md):
+
+- [Scope and design](docs/scope.md)
+- [Installation and usage](docs/installation.md)
+- [Action reference](docs/actions.md)
+- [Interactive interface](docs/interface.md)
+- [Architecture](docs/architecture.md)
+- [Development and testing](docs/development.md)
+- [Roadmap/TODOs](docs/TODOS.md)
+
 ## Scope
 
 This project provides:
@@ -28,8 +40,12 @@ This project provides:
 | Command | Implementation | Description | Requirements |
 |---|---|---|---|
 | `tcc system-info` | Python | Shows OS, architecture, Python, Termux prefix, and current directory | Python 3 |
+| `tcc environment` | Python | Shows useful Termux environment values | Python 3 |
 | `tcc storage` | Python | Shows total, used, free, and percentage storage for the current directory | Python 3 |
-| `tcc battery` | Python | Shows battery data from `termux-battery-status` | Termux:API app and `pkg install termux-api` |
+| `tcc battery [--json]` | Python | Shows battery data from `termux-battery-status` | Termux:API app and `pkg install termux-api` |
+| `tcc path-check [PATH ...]` | Python | Reports missing paths, files, directories, and symlinks | Python 3 |
+| `tcc file-info [PATH]` | Python | Shows type, size, permissions, and modification time | Python 3 |
+| `tcc checksum FILE` | Python | Calculates a streaming checksum, SHA-256 by default | Python 3 |
 | `tcc disk-free` | C | Shows native filesystem totals for the current directory | C compiler at install time |
 
 Running `tcc` without a command opens the interactive launcher. `tcc --help` and `tcc --version` are also available.
@@ -59,7 +75,12 @@ command -v tcc
 tcc --version
 tcc --help
 tcc system-info
+tcc environment
 tcc storage
+tcc battery --json
+tcc path-check "$HOME"
+tcc file-info README.md
+tcc checksum README.md
 tcc disk-free
 ```
 
@@ -99,6 +120,8 @@ Navigation supports:
 - `ENTER` to run an action;
 - `q` to quit.
 
+The menu adapts to small screens: it detects terminal width, uses compact labels below 48 columns, clips long titles, and wraps descriptions on wider screens without overflowing horizontally.
+
 To add native navigation buttons, edit `~/.termux/termux.properties`:
 
 ```text
@@ -115,6 +138,7 @@ When standard input or output is not a terminal, `tcc` uses a numbered prompt in
 .
 ├── main.py              # Small compatibility entry point
 ├── install.sh           # Installs tcc globally in Termux
+├── docs/                # Project, action, interface, and development docs
 ├── tcc/
 │   ├── __init__.py      # Project name and version
 │   ├── cli.py           # Argument parsing and action registry
@@ -126,6 +150,8 @@ When standard input or output is not a terminal, `tcc` uses a numbered prompt in
     ├── disk.c           # Filesystem statistics action
     └── disk.h           # Native action interface
 ```
+
+See [`docs/architecture.md`](docs/architecture.md) for the detailed module responsibilities.
 
 ## Architecture
 

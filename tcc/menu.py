@@ -4,20 +4,50 @@ from __future__ import annotations
 
 import os
 import select
+import shutil
 import sys
+import textwrap
 import time
 from collections.abc import Callable
 
 Action = tuple[str, str, Callable[[], None]]
 
 
+def screen_width() -> int:
+    return max(24, shutil.get_terminal_size((64, 24)).columns)
+
+
+def clipped(value: str, width: int) -> str:
+    if len(value) <= width:
+        return value
+    if width < 4:
+        return value[:width]
+    return value[: width - 3] + "..."
+
+
 def draw(actions: list[Action], selected: int, title: str) -> None:
+    width = screen_width()
+    name_width = min(14, max(len(name) for name, _, _ in actions))
+    description_width = width - name_width - 9
+    compact = width < 48
+
     sys.stdout.write("\033[2J\033[H")
-    sys.stdout.write(f"{title}\n")
-    sys.stdout.write("Use UP/DOWN, w/s, numbers, ENTER, or q.\n\n")
+    sys.stdout.write(clipped(title, width) + "\n")
+    if compact:
+        sys.stdout.write("UP/DOWN  ENTER  q\n\n")
+    else:
+        sys.stdout.write("UP/DOWN, w/s, numbers, ENTER, or q\n\n")
+
     for number, (name, description, _) in enumerate(actions):
-        pointer = "▶" if number == selected else " "
-        sys.stdout.write(f" {pointer} {number + 1}. {name:<12} {description}\n")
+        pointer = ">" if number == selected else " "
+        label = f" {pointer} {number + 1}. {name:<{name_width}}"
+        if compact:
+            sys.stdout.write(clipped(label, width) + "\n")
+            continue
+        lines = textwrap.wrap(description, width=max(12, description_width)) or [""]
+        sys.stdout.write(label + clipped(lines[0], max(1, description_width)) + "\n")
+        for continuation in lines[1:]:
+            sys.stdout.write(" " * (name_width + 7) + clipped(continuation, max(1, description_width)) + "\n")
     sys.stdout.flush()
 
 
@@ -58,9 +88,10 @@ def wait_for_return() -> None:
 
 
 def numbered_menu(actions: list[Action], title: str) -> int:
-    print(f"{title} - choose an action")
+    width = screen_width()
+    print(clipped(f"{title} - choose an action", width))
     for number, (name, description, _) in enumerate(actions, 1):
-        print(f"  {number}. {name:<12} {description}")
+        print(clipped(f"  {number}. {name} - {description}", width))
     choice = input("Choice: ").strip().lower()
     if choice in {"q", str(len(actions)), "exit"}:
         return 0
