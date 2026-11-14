@@ -14,6 +14,11 @@ tcc
 - Number keys select an action directly.
 - `ENTER` runs the selected action.
 - `q` or `Ctrl-C` exits.
+- `/` starts action search; type text, use Backspace, then press Enter.
+- `?` opens the keyboard help overlay.
+- `ESC` clears an active search.
+
+The wide-screen layout includes a header, action list, selected-action detail area, and footer. On small screens it automatically changes to a compact single-column list.
 
 Configure native Termux buttons in `~/.termux/termux.properties`:
 

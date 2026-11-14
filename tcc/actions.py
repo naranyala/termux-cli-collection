@@ -10,9 +10,24 @@ import platform
 import shutil
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 from . import __version__
+
+
+def print_field(label: str, value: object) -> None:
+    width = max(24, shutil.get_terminal_size((64, 24)).columns)
+    label = str(label)
+    max_label = max(6, width // 3)
+    if len(label) > max_label:
+        label = label[: max_label - 3] + "..."
+    prefix = f"  {label}: "
+    lines = textwrap.wrap(str(value), width=max(8, width - len(prefix))) or [""]
+    print(prefix + lines[0])
+    continuation = " " * len(prefix)
+    for line in lines[1:]:
+        print(continuation + line)
 
 
 def format_bytes(value: int) -> str:
@@ -26,29 +41,29 @@ def format_bytes(value: int) -> str:
 
 def system_info() -> None:
     print("System information")
-    print(f"  Version:   {__version__}")
-    print(f"  OS:        {platform.system()} {platform.release()}")
-    print(f"  Machine:   {platform.machine()}")
-    print(f"  Python:    {platform.python_version()}")
-    print(f"  Termux:    {os.environ.get('PREFIX', 'not detected')}")
-    print(f"  Directory: {Path.cwd()}")
+    print_field("Version", __version__)
+    print_field("OS", f"{platform.system()} {platform.release()}")
+    print_field("Machine", platform.machine())
+    print_field("Python", platform.python_version())
+    print_field("Termux", os.environ.get("PREFIX", "not detected"))
+    print_field("Directory", Path.cwd())
 
 
 def storage() -> None:
     usage = shutil.disk_usage(Path.cwd())
     used = usage.total - usage.free
-    print(f"Storage: {Path.cwd()}")
-    print(f"  Total: {format_bytes(usage.total)}")
-    print(f"  Used:  {format_bytes(used)}")
-    print(f"  Free:  {format_bytes(usage.free)}")
-    print(f"  Usage: {used / usage.total * 100:.1f}%")
+    print_field("Storage", Path.cwd())
+    print_field("Total", format_bytes(usage.total))
+    print_field("Used", format_bytes(used))
+    print_field("Free", format_bytes(usage.free))
+    print_field("Usage", f"{used / usage.total * 100:.1f}%")
 
 
 def environment() -> None:
     print("Termux environment")
     for key in ("PREFIX", "HOME", "SHELL", "PWD"):
-        print(f"  {key}: {os.environ.get(key, 'not set')}")
-    print(f"  PATH entries: {len(os.environ.get('PATH', '').split(os.pathsep))}")
+        print_field(key, os.environ.get(key, "not set"))
+    print_field("PATH entries", len(os.environ.get("PATH", "").split(os.pathsep)))
 
 
 def path_check(targets: list[str] | None = None) -> int:
@@ -65,7 +80,7 @@ def path_check(targets: list[str] | None = None) -> int:
             kind = "directory"
         else:
             kind = "file"
-        print(f"{path}: {kind} ({resolved})")
+        print_field(str(path), f"{kind} ({resolved})")
     return 1 if missing else 0
 
 
@@ -77,11 +92,11 @@ def file_info(target: str = ".") -> int:
         print(f"Cannot inspect {path}: {error}", file=sys.stderr)
         return 1
     kind = "directory" if path.is_dir() else "file" if path.is_file() else "other"
-    print(f"Path: {path.resolve()}")
-    print(f"  Type:  {kind}")
-    print(f"  Size:  {format_bytes(info.st_size)}")
-    print(f"  Mode:  {oct(info.st_mode & 0o777)}")
-    print(f"  Mtime: {datetime.datetime.fromtimestamp(info.st_mtime).isoformat(timespec="seconds")}")
+    print_field("Path", path.resolve())
+    print_field("Type", kind)
+    print_field("Size", format_bytes(info.st_size))
+    print_field("Mode", oct(info.st_mode & 0o777))
+    print_field("Mtime", datetime.datetime.fromtimestamp(info.st_mtime).isoformat(timespec="seconds"))
     return 0
 
 

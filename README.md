@@ -118,9 +118,12 @@ Navigation supports:
 - `w` / `s` and `k` / `j`;
 - number keys for direct selection;
 - `ENTER` to run an action;
+- `/` to search actions;
+- `?` to open keyboard help;
+- `ESC` to clear search;
 - `q` to quit.
 
-The menu adapts to small screens: it detects terminal width, uses compact labels below 48 columns, clips long titles, and wraps descriptions on wider screens without overflowing horizontally.
+The launcher uses a header, action list, selected-action detail panel, search mode, help overlay, and scrolling selection on larger screens. It adapts to small screens: it detects terminal width, uses compact labels below 48 columns, clips long titles, and wraps descriptions on wider screens without overflowing horizontally.
 
 To add native navigation buttons, edit `~/.termux/termux.properties`:
 
