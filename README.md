@@ -1,8 +1,15 @@
 # Termux CLI Collection (`tcc`)
 
-A small collection of practical, shell-friendly command-line utilities for [Termux](https://termux.dev/). It combines Python for fast, portable actions with C for native POSIX/system actions.
+[![CI](https://github.com/naranyala/termux-cli-collection/actions/workflows/ci.yml/badge.svg)](https://github.com/naranyala/termux-cli-collection/actions/workflows/ci.yml)
+
+A small collection of practical, shell-friendly command-line utilities for [Termux](https://termux.dev/). It combines Python for fast, portable actions with C for native POSIX/system actions, and bundles everything behind a single global `tcc` command with an interactive launcher.
 
 The project is designed for everyday Android terminal workflows, experimentation, and learning. It does not require root access.
+
+- **14 actions** across system, device, file, and native categories;
+- **interactive launcher** with search, categories, and small-screen support;
+- **standard library only** on the Python side, plain POSIX on the C side;
+- **script-friendly**: predictable exit codes, streaming output, optional JSON.
 
 ## Documentation
 
@@ -10,11 +17,21 @@ Detailed documentation is maintained in [`docs/`](docs/README.md):
 
 - [Scope and design](docs/scope.md)
 - [Installation and usage](docs/installation.md)
-- [Action reference](docs/actions.md)
-- [Interactive interface](docs/interface.md)
+- [Action reference](docs/actions.md) — every action with examples and exit codes
+- [Interactive interface](docs/interface.md) — launcher keys, layouts, fallbacks
 - [Architecture](docs/architecture.md)
 - [Development and testing](docs/development.md)
 - [Roadmap/TODOs](docs/TODOS.md)
+
+## Quick start
+
+```sh
+git clone <repository-url>
+cd termux-cli-collection
+./install.sh
+tcc                 # interactive launcher
+tcc system-info     # or run any action directly
+```
 
 ## Scope
 
@@ -35,24 +52,62 @@ This project provides:
 - malware, credential theft, or offensive-security automation;
 - unnecessary dependencies or one large application framework.
 
-## Current actions
+## Actions
 
-| Command | Implementation | Description | Requirements |
-|---|---|---|---|
-| `tcc system-info` | Python | Shows OS, architecture, Python, Termux prefix, and current directory | Python 3 |
-| `tcc environment` | Python | Shows useful Termux environment values | Python 3 |
-| `tcc storage` | Python | Shows total, used, free, and percentage storage for the current directory | Python 3 |
-| `tcc battery [--json]` | Python | Shows battery data from `termux-battery-status` | Termux:API app and `pkg install termux-api` |
-| `tcc path-check [PATH ...]` | Python | Reports missing paths, files, directories, and symlinks | Python 3 |
-| `tcc file-info [PATH]` | Python | Shows type, size, permissions, and modification time | Python 3 |
-| `tcc checksum FILE` | Python | Calculates a streaming checksum, SHA-256 by default | Python 3 |
-| `tcc ports` | Python | Shows listening network sockets when `ss` or `netstat` is available | Optional `iproute2` package |
-| `tcc processes` | Python | Shows a compact process list | Termux `ps` |
-| `tcc disk-free` | C | Shows native filesystem totals for the current directory | C compiler at install time |
-| `tcc mem-info` | C | Shows available Linux memory statistics | C compiler at install time |
-| `tcc line-count FILE` | C | Counts lines and bytes without loading the whole file | C compiler at install time |
+| Command | Implementation | Category | Description | Requirements |
+|---|---|---|---|---|
+| `tcc system-info [--json]` | Python | System | Shows OS, architecture, Python, Termux prefix, and current directory | Python 3 |
+| `tcc environment` | Python | System | Shows useful Termux environment values | Python 3 |
+| `tcc storage` | Python | System | Shows total, used, free, and percentage storage for the current directory | Python 3 |
+| `tcc ports` | Python | System | Shows listening network sockets when `ss` or `netstat` is available | Optional `iproute2` package |
+| `tcc processes` | Python | System | Shows a compact process list | Termux `ps` |
+| `tcc battery [--json]` | Python | Device | Shows battery data from `termux-battery-status` | Termux:API app and `pkg install termux-api` |
+| `tcc clipboard get` | Python | Device | Prints the Android clipboard content | Termux:API app and `pkg install termux-api` |
+| `tcc clipboard set TEXT` | Python | Device | Replaces the Android clipboard content | Termux:API app and `pkg install termux-api` |
+| `tcc path-check [PATH ...]` | Python | Files | Reports missing paths, files, directories, and symlinks | Python 3 |
+| `tcc file-info [PATH] [--json]` | Python | Files | Shows type, size, permissions, and modification time | Python 3 |
+| `tcc checksum FILE` | Python | Files | Calculates a streaming checksum, SHA-256 by default | Python 3 |
+| `tcc disk-free` | C | Native | Shows native filesystem totals for the current directory | C compiler at install time |
+| `tcc mem-info` | C | Native | Shows available Linux memory statistics | C compiler at install time |
+| `tcc line-count FILE` | C | Native | Counts lines and bytes without loading the whole file | C compiler at install time |
+| `tcc tree [PATH] [--depth N]` | C | Native | Shows a compact, depth-limited directory tree | C compiler at install time |
 
-Running `tcc` without a command opens the interactive launcher. `tcc --help` and `tcc --version` are also available.
+The launcher additionally exposes an `exit` entry that closes it.
+
+## Command-line usage
+
+```sh
+tcc [--version] [--json] [--algorithm NAME] [--depth N] [COMMAND [TARGET ...]]
+```
+
+| Flag | Applies to | Description |
+|---|---|---|
+| `--version` | global | Print the `tcc` version |
+| `--help` | global | Show the parser help |
+| `--json` | `battery`, `system-info`, `file-info` | Print machine-readable JSON on stdout |
+| `--algorithm NAME` | `checksum` | Any `hashlib` algorithm; default `sha256` |
+| `--depth N` | `tree` | Tree depth, 1-16; default 3 |
+
+Running `tcc` without a command opens the interactive launcher. Every action also works when piped: `tcc battery --json | python -m json.tool`.
+
+### Exit codes
+
+Actions are script-safe: they never prompt for input and always return a meaningful status.
+
+| Code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | The action could not complete (missing file, missing Termux:API, missing `ss`/`netstat`, native binary failure) |
+| `2` | Usage error (unsupported checksum algorithm, `clipboard` without content, invalid native arguments, invalid menu choice) |
+| `130` | Interrupted by `Ctrl-C` in the launcher |
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `TCC_C_BINARY` | Overrides the path to the native binary; otherwise `$PREFIX/libexec/tcc/tcc-c` is used, falling back to a locally built `./tcc-c` next to the repository |
+| `PREFIX` | Termux prefix, used to locate installed files |
+| `TERM` | `dumb` or empty forces the plain numbered menu instead of the full-screen launcher |
 
 ## Installation
 
@@ -68,7 +123,7 @@ chmod +x install.sh
 The installer:
 
 1. copies the Python launcher and package to `$PREFIX/share/tcc`;
-2. compiles the native C action when `cc` is available;
+2. compiles the native C actions when `cc` is available;
 3. installs the global command at `$PREFIX/bin/tcc`;
 4. installs the native binary at `$PREFIX/libexec/tcc/tcc-c`.
 
@@ -90,15 +145,16 @@ tcc processes
 tcc disk-free
 tcc mem-info
 tcc line-count README.md
+tcc tree docs --depth 2
 ```
 
-Install the optional battery integration with:
+Install the optional Termux:API integrations (battery, clipboard) with:
 
 ```sh
 pkg install termux-api
 ```
 
-The Termux:API Android application must also be installed for `tcc battery` to return data. Without it, the action prints an installation hint and exits safely.
+The Termux:API Android application must also be installed for `tcc battery` and `tcc clipboard` to return data. Without it, those actions print an installation hint and exit with status 1.
 
 ### Updating
 
@@ -111,7 +167,14 @@ git pull
 
 The installer replaces the installed Python package and native binary.
 
-## Interactive launcher navigation
+### Uninstalling
+
+```sh
+rm -f "$PREFIX/bin/tcc"
+rm -rf "$PREFIX/share/tcc" "$PREFIX/libexec/tcc"
+```
+
+## Interactive launcher
 
 Run:
 
@@ -119,19 +182,18 @@ Run:
 tcc
 ```
 
-Navigation supports:
+Actions are grouped into categories (`System`, `Device`, `Files`, `Native`), and the launcher supports:
 
 - Termux Extra Keys `UP` and `DOWN` buttons;
-- keyboard arrow keys;
-- `w` / `s` and `k` / `j`;
+- keyboard arrow keys, or `w` / `s` and `k` / `j`;
 - number keys for direct selection;
 - `ENTER` to run an action;
-- `/` to search actions;
+- `/` to search actions by name, category, or description;
 - `?` to open keyboard help;
-- `ESC` to clear search;
-- `q` to quit.
+- `ESC` to clear search or close help;
+- `q` (or `Ctrl-C`) to quit.
 
-The launcher uses a header, action list, selected-action detail panel, search mode, help overlay, and scrolling selection on larger screens. It adapts to small screens: it detects terminal width, uses a compact single-column layout below 72 columns, clips long titles, and shows the detail panel only when there is room.
+The launcher uses a header, a selected-action detail panel, search mode, a help overlay, and scrolling selection on larger screens. It adapts to small screens: it detects terminal width and height, uses a compact single-column layout below 72 columns, clips long titles, and shows the detail panel only when there is room. Terminals without ANSI support (such as `TERM=dumb`) fall back to a plain numbered menu.
 
 To add native navigation buttons, edit `~/.termux/termux.properties`:
 
@@ -141,7 +203,11 @@ extra-keys = [['ESC','UP','DOWN','ENTER','TAB','CTRL']]
 
 Reload the Termux configuration or restart the session afterward.
 
-When standard input or output is not a terminal, `tcc` uses a numbered prompt instead of raw keyboard mode, making it usable in simple scripts and tests.
+When standard input or output is not a terminal, `tcc` uses a numbered prompt instead of raw keyboard mode, making it usable in simple scripts and tests:
+
+```sh
+printf '1\n' | tcc
+```
 
 ## Repository layout
 
@@ -150,9 +216,11 @@ When standard input or output is not a terminal, `tcc` uses a numbered prompt in
 ├── main.py              # Small compatibility entry point
 ├── install.sh           # Installs tcc globally in Termux
 ├── docs/                # Project, action, interface, and development docs
+├── tests/               # Python and native C test suite
+├── .github/workflows/   # CI workflow
 ├── tcc/
 │   ├── __init__.py      # Project name and version
-│   ├── cli.py           # Argument parsing and action registry
+│   ├── cli.py           # Argument parsing and categorized action registry
 │   ├── menu.py          # Interactive and non-interactive picker
 │   └── actions.py       # Python action implementations
 ├── main.c               # Compatibility C build entry point
@@ -161,7 +229,9 @@ When standard input or output is not a terminal, `tcc` uses a numbered prompt in
     ├── disk.c           # Filesystem statistics action
     ├── disk.h           # Disk action interface
     ├── system.c         # Memory and line-count actions
-    └── system.h         # System action interface
+    ├── system.h         # System action interface
+    ├── tree.c           # Depth-limited directory tree action
+    └── tree.h           # Tree action interface
 ```
 
 See [`docs/architecture.md`](docs/architecture.md) for the detailed module responsibilities.
@@ -170,23 +240,23 @@ See [`docs/architecture.md`](docs/architecture.md) for the detailed module respo
 
 The launcher keeps the user interface separate from action implementations:
 
-- `tcc.cli` defines the available action registry and direct command handling.
-- `tcc.menu` owns terminal input, Termux button navigation, rendering, and fallback prompts.
-- `tcc.actions` contains Python implementations and invokes installed native actions when needed.
-- `csrc` contains independently compilable C code. The Python launcher calls the installed C binary through a narrow command interface.
+- `tcc.cli` defines the categorized action registry and direct command handling.
+- `tcc.menu` owns terminal input, key decoding (including Termux Extra Keys sequences), rendering, and fallback prompts.
+- `tcc.actions` contains Python implementations and invokes the native binary through a narrow command interface.
+- `csrc` contains independently compilable C code with no shared state.
 
-To add a new action, implement it in the appropriate action module, register it in `tcc/cli.py`, and document it in the action table above.
+To add a new action, implement it in the appropriate action module, register it in `tcc/cli.py`, and document it in the action table above. The full checklist is in [`docs/architecture.md`](docs/architecture.md).
 
 ## Development and testing
 
-Run Python actions directly from the repository:
+Run Python actions directly from the repository without installing:
 
 ```sh
 python main.py --help
 python main.py system-info
 python main.py storage
 python main.py battery
-python main.py disk-free
+python main.py disk-free     # uses ./tcc-c when built locally
 ```
 
 Check Python syntax:
@@ -195,10 +265,10 @@ Check Python syntax:
 python -m py_compile main.py tcc/*.py
 ```
 
-Build and test the C action without installing it globally:
+Build and test the C actions without installing them globally:
 
 ```sh
-cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c csrc/system.c -o tcc-c
+cc -Wall -Wextra -O2 csrc/main.c csrc/disk.c csrc/system.c csrc/tree.c -o tcc-c
 ./tcc-c --help
 ./tcc-c disk-free
 rm tcc-c
@@ -207,8 +277,16 @@ rm tcc-c
 The compatibility source can also be built with:
 
 ```sh
-cc -Wall -Wextra -O2 main.c csrc/disk.c csrc/system.c -o tcc-c
+cc -Wall -Wextra -O2 main.c csrc/disk.c csrc/system.c csrc/tree.c -o tcc-c
 ```
+
+Run the full test suite (40 tests; builds the native binary when `cc` is available):
+
+```sh
+python -m unittest discover -s tests -t .
+```
+
+Continuous integration runs the same checks on every push; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Contribution guidelines
 
@@ -221,12 +299,12 @@ New actions should:
 5. work without root whenever feasible;
 6. document optional Termux packages and Android limitations;
 7. keep modules small and avoid duplicating terminal or dispatch logic;
-8. include a README entry and a simple manual test command.
+8. include a README table entry, a `docs/actions.md` section, and tests.
 
 ## Roadmap
 
-- add focused file and text utilities;
-- add automated Python and C tests;
-- improve machine-readable output options such as `--json`;
-- document Android-version and Termux:API limitations;
-- add packaging metadata as the collection grows.
+Completed and planned work is tracked in [`docs/TODOS.md`](docs/TODOS.md). Remaining highlights:
+
+- packaging metadata and a repeatable release process;
+- more machine-readable `--json` coverage (`storage`, `ports`);
+- focused file and text utilities.

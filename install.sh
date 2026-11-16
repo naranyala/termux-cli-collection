@@ -15,7 +15,7 @@ cp -R "$ROOT/tcc" "$INSTALL_DIR/tcc"
 chmod 755 "$INSTALL_DIR/main.py"
 
 if command -v cc >/dev/null 2>&1; then
-    cc -Wall -Wextra -O2 "$ROOT/csrc/main.c" "$ROOT/csrc/disk.c" "$ROOT/csrc/system.c" -o "$LIBEXEC_DIR/tcc-c"
+    cc -Wall -Wextra -O2 "$ROOT/csrc/main.c" "$ROOT/csrc/disk.c" "$ROOT/csrc/system.c" "$ROOT/csrc/tree.c" -o "$LIBEXEC_DIR/tcc-c"
     chmod 755 "$LIBEXEC_DIR/tcc-c"
     C_STATUS="installed"
 else

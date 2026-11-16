@@ -39,14 +39,26 @@ def format_bytes(value: int) -> str:
     return f"{value} B"
 
 
-def system_info() -> None:
+def system_info(as_json: bool = False) -> int:
+    payload = {
+        "version": __version__,
+        "os": f"{platform.system()} {platform.release()}",
+        "machine": platform.machine(),
+        "python": platform.python_version(),
+        "termux": os.environ.get("PREFIX", "not detected"),
+        "directory": str(Path.cwd()),
+    }
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
     print("System information")
-    print_field("Version", __version__)
-    print_field("OS", f"{platform.system()} {platform.release()}")
-    print_field("Machine", platform.machine())
-    print_field("Python", platform.python_version())
-    print_field("Termux", os.environ.get("PREFIX", "not detected"))
-    print_field("Directory", Path.cwd())
+    print_field("Version", payload["version"])
+    print_field("OS", payload["os"])
+    print_field("Machine", payload["machine"])
+    print_field("Python", payload["python"])
+    print_field("Termux", payload["termux"])
+    print_field("Directory", payload["directory"])
+    return 0
 
 
 def storage() -> None:
@@ -84,7 +96,7 @@ def path_check(targets: list[str] | None = None) -> int:
     return 1 if missing else 0
 
 
-def file_info(target: str = ".") -> int:
+def file_info(target: str = ".", as_json: bool = False) -> int:
     path = Path(target).expanduser()
     try:
         info = path.stat()
@@ -92,11 +104,21 @@ def file_info(target: str = ".") -> int:
         print(f"Cannot inspect {path}: {error}", file=sys.stderr)
         return 1
     kind = "directory" if path.is_dir() else "file" if path.is_file() else "other"
-    print_field("Path", path.resolve())
-    print_field("Type", kind)
+    payload = {
+        "path": str(path.resolve()),
+        "type": kind,
+        "size": info.st_size,
+        "mode": oct(info.st_mode & 0o777),
+        "mtime": datetime.datetime.fromtimestamp(info.st_mtime).isoformat(timespec="seconds"),
+    }
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    print_field("Path", payload["path"])
+    print_field("Type", payload["type"])
     print_field("Size", format_bytes(info.st_size))
-    print_field("Mode", oct(info.st_mode & 0o777))
-    print_field("Mtime", datetime.datetime.fromtimestamp(info.st_mtime).isoformat(timespec="seconds"))
+    print_field("Mode", payload["mode"])
+    print_field("Mtime", payload["mtime"])
     return 0
 
 
@@ -118,25 +140,56 @@ def checksum(target: str, algorithm: str = "sha256") -> int:
     return 0
 
 
-def battery(as_json: bool = False) -> None:
+def battery(as_json: bool = False) -> int:
     command = shutil.which("termux-battery-status")
     if command is None:
         print("Battery status is unavailable.")
         print("Install Termux:API and run: pkg install termux-api")
-        return
+        return 1
     try:
         result = subprocess.run([command], capture_output=True, text=True, check=True)
         data = json.loads(result.stdout)
     except (OSError, subprocess.CalledProcessError, json.JSONDecodeError) as error:
         print(f"Could not read battery status: {error}", file=sys.stderr)
-        return
+        return 1
     if as_json:
         print(json.dumps(data, indent=2, sort_keys=True))
-        return
+        return 0
     print("Battery status")
     for key in ("percentage", "status", "plugged", "temperature", "current"):
         if key in data:
             print(f"  {key.capitalize()}: {data[key]}")
+    return 0
+
+
+def clipboard(operation: str = "get", content: list[str] | None = None) -> int:
+    if operation not in ("get", "set"):
+        print(f"Unknown clipboard operation: {operation} (use get or set)", file=sys.stderr)
+        return 2
+    if operation == "set" and not content:
+        print("clipboard set requires content: tcc clipboard set TEXT", file=sys.stderr)
+        return 2
+    command = shutil.which(f"termux-clipboard-{operation}")
+    if command is None:
+        print("Clipboard support is unavailable.")
+        print("Install Termux:API and run: pkg install termux-api", file=sys.stderr)
+        return 1
+    if operation == "set":
+        text = " ".join(content) if content else ""
+        try:
+            subprocess.run([command, text], capture_output=True, text=True, check=True)
+        except (OSError, subprocess.CalledProcessError) as error:
+            print(f"Could not write the clipboard: {error}", file=sys.stderr)
+            return 1
+        print("Clipboard updated.")
+        return 0
+    try:
+        result = subprocess.run([command], capture_output=True, text=True, check=True)
+    except (OSError, subprocess.CalledProcessError) as error:
+        print(f"Could not read the clipboard: {error}", file=sys.stderr)
+        return 1
+    print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
+    return 0
 
 
 def command_output(commands: list[list[str]]) -> list[str]:
@@ -152,51 +205,66 @@ def command_output(commands: list[list[str]]) -> list[str]:
     return []
 
 
-def ports() -> None:
+def ports() -> int:
     lines = command_output([["ss", "-lntu"], ["netstat", "-lntu"]])
     if not lines:
         print("No socket listing tool is available (try: pkg install iproute2).", file=sys.stderr)
-        return
+        return 1
     print("Listening sockets")
     for line in lines[:20]:
         print(f"  {line}")
     if len(lines) > 20:
         print(f"  ... {len(lines) - 20} more")
+    return 0
 
 
-def processes() -> None:
+def processes() -> int:
     lines = command_output([["ps", "-A", "-o", "PID,USER,NAME"]],)
     if not lines:
         lines = command_output([["ps", "-A"]])
     if not lines:
         print("Process listing is unavailable.", file=sys.stderr)
-        return
+        return 1
     print("Processes (first 20)")
     for line in lines[:21]:
         print(f"  {line}")
     if len(lines) > 21:
         print(f"  ... {len(lines) - 21} more")
+    return 0
 
 
-def native_action(command: str, *arguments: str) -> None:
+def native_action(command: str, *arguments: str) -> int:
     binary = os.environ.get("TCC_C_BINARY")
     if not binary:
         # Installed layout: $PREFIX/share/tcc/tcc/actions.py.
         prefix = Path(__file__).resolve().parents[3]
         binary = str(prefix / "libexec" / "tcc" / "tcc-c")
+        if not Path(binary).is_file():
+            # Development layout: a locally built binary next to the checkout.
+            local = Path(__file__).resolve().parents[1] / "tcc-c"
+            if local.is_file():
+                binary = str(local)
     if not Path(binary).is_file():
         print("The native action is unavailable. Rerun ./install.sh.", file=sys.stderr)
-        return
-    subprocess.run([binary, command, *arguments], check=False)
+        return 1
+    result = subprocess.run([binary, command, *arguments], check=False)
+    return result.returncode
 
 
-def native_disk_free() -> None:
-    native_action("disk-free")
+def native_disk_free() -> int:
+    return native_action("disk-free")
 
 
-def native_mem_info() -> None:
-    native_action("mem-info")
+def native_mem_info() -> int:
+    return native_action("mem-info")
 
 
-def native_line_count(target: str) -> None:
-    native_action("line-count", target)
+def native_line_count(target: str) -> int:
+    return native_action("line-count", target)
+
+
+def native_tree(target: str = ".", depth: int | None = None) -> int:
+    arguments = [target]
+    if depth is not None:
+        arguments += ["--depth", str(depth)]
+    return native_action("tree", *arguments)
